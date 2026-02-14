@@ -18,10 +18,13 @@
 const socket = io("https://g4s-chat-server.onrender.com");
 
 socket.on("loadMessages", (messages) => {
+    document.getElementById("chat").innerHTML = "";
     messages.forEach(renderMessage);
 });
 
-socket.on("newMessage", renderMessage);
+socket.on("newMessage", (msg) => {
+    renderMessage(msg);
+});
 
 socket.on("updateMessage", (msg) => {
     const div = document.getElementById(msg.id);
@@ -31,9 +34,25 @@ socket.on("updateMessage", (msg) => {
 });
 
 function sendMessage() {
-    const text = document.getElementById("msg").value;
+    const input = document.getElementById("msg");
+    const text = input.value.trim();
+    if (!text) return;
+
     socket.emit("sendMessage", {
         text: text,
+        sender: "admin"
+    });
+
+    input.value = "";
+}
+
+function editMessage(id) {
+    const newText = prompt("Новое сообщение:");
+    if (!newText) return;
+
+    socket.emit("editMessage", {
+        id: id,
+        text: newText,
         sender: "admin"
     });
 }
@@ -46,11 +65,14 @@ function renderMessage(msg) {
 }
 
 function formatMessage(msg) {
-    return `<b>${msg.sender}:</b> ${msg.text} 
-    ${msg.edited && msg.sender === "client" ? "(изменено)" : ""}`;
+    return `
+        <b>${msg.sender}:</b> ${msg.text}
+        <button onclick="editMessage(${msg.id})">✏</button>
+    `;
 }
 </script>
 
 </body>
 
 </html>
+
