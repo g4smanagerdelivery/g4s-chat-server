@@ -26,7 +26,6 @@ io.on("connection", (socket) => {
 
         console.log("Client connected:", clientId);
 
-        // Создаем клиента если его нет
         if (!clients[clientId]) {
             clients[clientId] = {
                 name: clientId,
@@ -35,8 +34,6 @@ io.on("connection", (socket) => {
         }
 
         socket.join(clientId);
-
-        // Загружаем только его сообщения
         socket.emit("loadMessages", clients[clientId].messages);
     }
 
@@ -45,9 +42,7 @@ io.on("connection", (socket) => {
 
         const clientId = socket.handshake.query.clientId;
 
-        // Если сообщение от клиента
         if (clientId) {
-
             const message = {
                 id: Date.now(),
                 text: data.text,
@@ -56,12 +51,17 @@ io.on("connection", (socket) => {
             };
 
             clients[clientId].messages.push(message);
-
             io.to(clientId).emit("newMessage", message);
         }
     });
 
+    // Список клиентов для админа
+    socket.on("getClients", () => {
+        socket.emit("clientsList", Object.keys(clients));
+    });
+
 });
+
 server.listen(3000, () => {
     console.log("Server started on port 3000");
 });
