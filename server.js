@@ -4,8 +4,10 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
+app.use(express.static(__dirname));
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -49,3 +51,4 @@ server.listen(3000, () => {
     console.log("Server started on port 3000");
 
 });
+
