@@ -37,7 +37,8 @@ io.on("connection", (socket) => {
             clients[clientId] = {
                 name: clientId,
                 messages: [],
-                online: false
+                online: true,
+                unread: 0
             };
         }
 
@@ -45,6 +46,7 @@ io.on("connection", (socket) => {
         saveData();
 
         socket.join(clientId);
+
         socket.emit("loadMessages", clients[clientId].messages);
 
         io.emit("clientsList", clients);
@@ -71,9 +73,19 @@ io.on("connection", (socket) => {
         };
 
         clients[clientId].messages.push(message);
+
+        // Увеличиваем unread
+        clients[clientId].unread++;
+
         saveData();
 
         io.to(clientId).emit("newMessage", message);
+
+        io.emit("updateUnread", {
+            clientId,
+            unread: clients[clientId].unread
+        });
+
         io.emit("clientsList", clients);
     });
 
@@ -89,6 +101,7 @@ io.on("connection", (socket) => {
         };
 
         clients[clientId].messages.push(message);
+
         saveData();
 
         io.to(clientId).emit("newMessage", message);
@@ -103,13 +116,28 @@ io.on("connection", (socket) => {
 
         message.text = text;
 
-        // Только если редактировал клиент — показываем "(изменено)"
         if (sender === "client") {
             message.edited = true;
         }
 
         saveData();
+
         io.to(clientId).emit("updateMessage", message);
+    });
+
+    // ===== ПОМЕТИТЬ КАК ПРОЧИТАНО =====
+    socket.on("markAsRead", (clientId) => {
+        if (!clients[clientId]) return;
+
+        clients[clientId].unread = 0;
+        saveData();
+
+        io.emit("updateUnread", {
+            clientId,
+            unread: 0
+        });
+
+        io.emit("clientsList", clients);
     });
 
     // ===== СПИСОК КЛИЕНТОВ =====
@@ -126,7 +154,7 @@ io.on("connection", (socket) => {
         io.emit("clientsList", clients);
     });
 
-    // ===== ПОДКЛЮЧЕНИЕ АДМИНА К КОМНАТЕ =====
+    // ===== АДМИН ПОДКЛЮЧАЕТСЯ К КОМНАТЕ =====
     socket.on("joinClientRoom", (clientId) => {
         socket.join(clientId);
         socket.emit("loadMessages", clients[clientId]?.messages || []);
