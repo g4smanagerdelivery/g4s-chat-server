@@ -4,10 +4,12 @@
     <title>Admin Panel</title>
     <style>
         body { display: flex; font-family: Arial; }
-        #clients { width: 200px; border-right: 1px solid #ccc; padding: 10px; }
+        #clients { width: 250px; border-right: 1px solid #ccc; padding: 10px; }
         #chatArea { flex: 1; padding: 10px; }
-        #chat { height: 300px; overflow: auto; border: 1px solid #ccc; margin-bottom: 10px; padding: 5px; }
-        .clientBtn { display: block; margin-bottom: 5px; cursor: pointer; }
+        #chat { height: 400px; overflow: auto; border: 1px solid #ccc; margin-bottom: 10px; padding: 5px; }
+        .clientBtn { display: block; margin-bottom: 5px; padding: 5px; cursor: pointer; }
+        .online { color: green; }
+        .offline { color: gray; }
     </style>
 </head>
 <body>
@@ -22,6 +24,7 @@
     <div id="chat"></div>
     <input id="msg" placeholder="Введите сообщение">
     <button onclick="sendMessage()">Отправить</button>
+    <button onclick="renameClient()">Переименовать</button>
 </div>
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
@@ -31,32 +34,39 @@ const socket = io("https://g4s-chat-server.onrender.com");
 
 let selectedClient = null;
 
-// Получаем список клиентов при подключении
 socket.emit("getClients");
 
-socket.on("clientsList", (list) => {
+// ===== Автообновление списка =====
+socket.on("clientsList", (clients) => {
+
     const container = document.getElementById("clientsList");
     container.innerHTML = "";
 
-    list.forEach(clientId => {
+    Object.keys(clients).forEach(id => {
+
+        const client = clients[id];
+
         const btn = document.createElement("button");
-        btn.innerText = clientId;
         btn.className = "clientBtn";
-        btn.onclick = () => selectClient(clientId);
+
+        btn.innerHTML =
+            `<span class="${client.online ? "online" : "offline"}">
+                ●
+             </span> ${client.name}`;
+
+        btn.onclick = () => selectClient(id);
+
         container.appendChild(btn);
     });
 });
 
-// Выбор клиента
 function selectClient(clientId) {
     selectedClient = clientId;
-    document.getElementById("currentClient").innerText = "Чат: " + clientId;
     document.getElementById("chat").innerHTML = "";
-
+    document.getElementById("currentClient").innerText = "Чат: " + clientId;
     socket.emit("joinClientRoom", clientId);
 }
 
-// Загрузка сообщений клиента
 socket.on("loadMessages", (messages) => {
     const chat = document.getElementById("chat");
     chat.innerHTML = "";
@@ -65,12 +75,8 @@ socket.on("loadMessages", (messages) => {
 
 socket.on("newMessage", renderMessage);
 
-// Отправка сообщения
 function sendMessage() {
-    if (!selectedClient) {
-        alert("Выберите клиента");
-        return;
-    }
+    if (!selectedClient) return alert("Выберите клиента");
 
     const input = document.getElementById("msg");
     const text = input.value.trim();
@@ -78,10 +84,22 @@ function sendMessage() {
 
     socket.emit("adminMessage", {
         clientId: selectedClient,
-        text: text
+        text
     });
 
     input.value = "";
+}
+
+function renameClient() {
+    if (!selectedClient) return;
+
+    const newName = prompt("Новое имя клиента:");
+    if (!newName) return;
+
+    socket.emit("renameClient", {
+        clientId: selectedClient,
+        name: newName
+    });
 }
 
 function renderMessage(msg) {
