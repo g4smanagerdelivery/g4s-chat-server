@@ -7,9 +7,22 @@
         #clients { width: 250px; border-right: 1px solid #ccc; padding: 10px; }
         #chatArea { flex: 1; padding: 10px; }
         #chat { height: 400px; overflow: auto; border: 1px solid #ccc; margin-bottom: 10px; padding: 5px; }
-        .clientBtn { display: block; margin-bottom: 5px; padding: 5px; cursor: pointer; }
-        .online { color: green; }
-        .offline { color: gray; }
+        .clientBtn { 
+            display: flex; 
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px; 
+            padding: 5px; 
+            cursor: pointer; 
+            width: 100%;
+        }
+        .badge {
+            background: red;
+            color: white;
+            border-radius: 50%;
+            padding: 3px 7px;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -29,13 +42,12 @@
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-
 <script>
 const socket = io("https://g4s-chat-server.onrender.com");
 
 let selectedClient = null;
 
+// ===== ЗАГРУЗКА СПИСКА =====
 socket.emit("getClients");
 
 socket.on("clientsList", (clients) => {
@@ -46,28 +58,45 @@ socket.on("clientsList", (clients) => {
         const c = clients[id];
 
         const btn = document.createElement("button");
+        btn.className = "clientBtn";
+        btn.id = "client-" + id;
+
         btn.innerHTML = `
-            <span style="color:${c.online ? "green" : "gray"}">●</span>
-            ${c.name}
+            <span>
+                <span style="color:${c.online ? "green" : "gray"}">●</span>
+                ${c.name}
+            </span>
+            <span class="badge" style="display:${c.unread > 0 ? "inline-block" : "none"}">
+                ${c.unread || 0}
+            </span>
         `;
+
         btn.onclick = () => selectClient(id);
 
         container.appendChild(btn);
     });
 });
 
+// ===== ВЫБОР КЛИЕНТА =====
 function selectClient(clientId) {
     selectedClient = clientId;
+
     document.getElementById("chat").innerHTML = "";
+
     socket.emit("joinClientRoom", clientId);
+
+    // Обнуляем счётчик
+    socket.emit("markAsRead", clientId);
 }
 
+// ===== ЗАГРУЗКА СООБЩЕНИЙ =====
 socket.on("loadMessages", (messages) => {
     const chat = document.getElementById("chat");
     chat.innerHTML = "";
     messages.forEach(renderMessage);
 });
 
+// ===== НОВОЕ СООБЩЕНИЕ =====
 socket.on("newMessage", renderMessage);
 
 socket.on("updateMessage", (msg) => {
@@ -75,6 +104,22 @@ socket.on("updateMessage", (msg) => {
     if (div) div.innerHTML = formatMessage(msg);
 });
 
+// ===== ОБНОВЛЕНИЕ UNREAD =====
+socket.on("updateUnread", (data) => {
+    const btn = document.getElementById("client-" + data.clientId);
+    if (!btn) return;
+
+    const badge = btn.querySelector(".badge");
+
+    if (data.unread > 0) {
+        badge.innerText = data.unread;
+        badge.style.display = "inline-block";
+    } else {
+        badge.style.display = "none";
+    }
+});
+
+// ===== ОТПРАВКА СООБЩЕНИЯ =====
 function sendMessage() {
     if (!selectedClient) return alert("Выберите клиента");
 
@@ -90,6 +135,7 @@ function sendMessage() {
     input.value = "";
 }
 
+// ===== РЕДАКТИРОВАНИЕ =====
 function editMessage(id) {
     if (!selectedClient) return;
 
@@ -104,6 +150,7 @@ function editMessage(id) {
     });
 }
 
+// ===== ПЕРЕИМЕНОВАНИЕ =====
 function renameClient() {
     if (!selectedClient) return;
 
@@ -116,6 +163,7 @@ function renameClient() {
     });
 }
 
+// ===== РЕНДЕР СООБЩЕНИЯ =====
 function renderMessage(msg) {
     const div = document.createElement("div");
     div.id = msg.id;
@@ -133,4 +181,3 @@ function formatMessage(msg) {
 
 </body>
 </html>
-
