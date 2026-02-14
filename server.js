@@ -14,9 +14,7 @@ const io = new Server(server, {
     cors: { origin: "*" }
 });
 
-
-// ====== ЗАГРУЗКА ДАННЫХ ИЗ ФАЙЛА ======
-
+// ===== ЗАГРУЗКА ДАННЫХ =====
 let clients = {};
 
 if (fs.existsSync("data.json")) {
@@ -27,14 +25,12 @@ function saveData() {
     fs.writeFileSync("data.json", JSON.stringify(clients, null, 2));
 }
 
-
-// ====== SOCKET ======
-
+// ===== SOCKET =====
 io.on("connection", (socket) => {
 
     const clientId = socket.handshake.query.clientId;
 
-    // ===== ЕСЛИ ЭТО КЛИЕНТ =====
+    // ===== ЕСЛИ ПОДКЛЮЧИЛСЯ КЛИЕНТ =====
     if (clientId) {
 
         if (!clients[clientId]) {
@@ -54,7 +50,7 @@ io.on("connection", (socket) => {
         io.emit("clientsList", clients);
     }
 
-    // ===== КЛИЕНТ ОТКЛЮЧИЛСЯ =====
+    // ===== ОТКЛЮЧЕНИЕ =====
     socket.on("disconnect", () => {
         if (clientId && clients[clientId]) {
             clients[clientId].online = false;
@@ -63,10 +59,8 @@ io.on("connection", (socket) => {
         }
     });
 
-
     // ===== СООБЩЕНИЕ ОТ КЛИЕНТА =====
     socket.on("sendMessage", (data) => {
-
         if (!clientId) return;
 
         const message = {
@@ -83,10 +77,8 @@ io.on("connection", (socket) => {
         io.emit("clientsList", clients);
     });
 
-
     // ===== СООБЩЕНИЕ ОТ АДМИНА =====
     socket.on("adminMessage", ({ clientId, text }) => {
-
         if (!clients[clientId]) return;
 
         const message = {
@@ -102,24 +94,39 @@ io.on("connection", (socket) => {
         io.to(clientId).emit("newMessage", message);
     });
 
+    // ===== РЕДАКТИРОВАНИЕ =====
+    socket.on("editMessage", ({ clientId, id, text, sender }) => {
+        if (!clients[clientId]) return;
 
-    // ===== ПОЛУЧЕНИЕ СПИСКА КЛИЕНТОВ =====
+        const message = clients[clientId].messages.find(m => m.id == id);
+        if (!message) return;
+
+        message.text = text;
+
+        // Только если редактировал клиент — показываем "(изменено)"
+        if (sender === "client") {
+            message.edited = true;
+        }
+
+        saveData();
+        io.to(clientId).emit("updateMessage", message);
+    });
+
+    // ===== СПИСОК КЛИЕНТОВ =====
     socket.on("getClients", () => {
         socket.emit("clientsList", clients);
     });
 
-
-    // ===== ПЕРЕИМЕНОВАНИЕ КЛИЕНТА =====
+    // ===== ПЕРЕИМЕНОВАНИЕ =====
     socket.on("renameClient", ({ clientId, name }) => {
-        if (clients[clientId]) {
-            clients[clientId].name = name;
-            saveData();
-            io.emit("clientsList", clients);
-        }
+        if (!clients[clientId]) return;
+
+        clients[clientId].name = name;
+        saveData();
+        io.emit("clientsList", clients);
     });
 
-
-    // ===== ЗАГРУЗКА ЧАТА =====
+    // ===== ПОДКЛЮЧЕНИЕ АДМИНА К КОМНАТЕ =====
     socket.on("joinClientRoom", (clientId) => {
         socket.join(clientId);
         socket.emit("loadMessages", clients[clientId]?.messages || []);
@@ -127,7 +134,6 @@ io.on("connection", (socket) => {
 
 });
 
-
 server.listen(3000, () => {
-    console.log("Server started on port 3000");
+    console.log("SERVER READY");
 });
