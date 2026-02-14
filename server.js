@@ -14,44 +14,54 @@ const io = new Server(server, {
     cors: { origin: "*" }
 });
 
-let messages = [];
+// Храним клиентов и их сообщения
+let clients = {};
 
 io.on("connection", (socket) => {
 
-    socket.emit("loadMessages", messages);
+    const clientId = socket.handshake.query.clientId;
 
+    // ЕСЛИ ЭТО КЛИЕНТ
+    if (clientId) {
+
+        console.log("Client connected:", clientId);
+
+        // Создаем клиента если его нет
+        if (!clients[clientId]) {
+            clients[clientId] = {
+                name: clientId,
+                messages: []
+            };
+        }
+
+        socket.join(clientId);
+
+        // Загружаем только его сообщения
+        socket.emit("loadMessages", clients[clientId].messages);
+    }
+
+    // Отправка сообщения
     socket.on("sendMessage", (data) => {
-        console.log("Message received:", data);
-        const message = {
-            id: Date.now(),
-            text: data.text,
-            sender: data.sender,
-            edited: false
-        };
 
-        messages.push(message);
-        io.emit("newMessage", message);
-    });
+        const clientId = socket.handshake.query.clientId;
 
-    socket.on("editMessage", (data) => {
-       console.log("Message received:", data);
-        const msg = messages.find(m => m.id === data.id);
-        if (msg) {
-            msg.text = data.text;
+        // Если сообщение от клиента
+        if (clientId) {
 
-            if (data.sender === "client") {
-                msg.edited = true;
-            }
+            const message = {
+                id: Date.now(),
+                text: data.text,
+                sender: "client",
+                edited: false
+            };
 
-            io.emit("updateMessage", msg);
+            clients[clientId].messages.push(message);
+
+            io.to(clientId).emit("newMessage", message);
         }
     });
 
 });
-
 server.listen(3000, () => {
     console.log("Server started on port 3000");
-
 });
-
-
