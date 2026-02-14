@@ -38,10 +38,11 @@ function sendMessage() {
     const text = input.value.trim();
     if (!text) return;
 
-    socket.emit("sendMessage", {
-        text: text,
-        sender: "admin"
-    });
+    socket.emit("getClients");
+
+socket.on("clientsList", (list) => {
+    console.log(list);
+});
 
     input.value = "";
 }
@@ -75,4 +76,5 @@ function formatMessage(msg) {
 </body>
 
 </html>
+
 
