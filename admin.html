@@ -29,6 +29,8 @@
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
 <script>
 const socket = io("https://g4s-chat-server.onrender.com");
 
@@ -36,24 +38,18 @@ let selectedClient = null;
 
 socket.emit("getClients");
 
-// ===== Автообновление списка =====
 socket.on("clientsList", (clients) => {
-
     const container = document.getElementById("clientsList");
     container.innerHTML = "";
 
     Object.keys(clients).forEach(id => {
-
-        const client = clients[id];
+        const c = clients[id];
 
         const btn = document.createElement("button");
-        btn.className = "clientBtn";
-
-        btn.innerHTML =
-            `<span class="${client.online ? "online" : "offline"}">
-                ●
-             </span> ${client.name}`;
-
+        btn.innerHTML = `
+            <span style="color:${c.online ? "green" : "gray"}">●</span>
+            ${c.name}
+        `;
         btn.onclick = () => selectClient(id);
 
         container.appendChild(btn);
@@ -63,7 +59,6 @@ socket.on("clientsList", (clients) => {
 function selectClient(clientId) {
     selectedClient = clientId;
     document.getElementById("chat").innerHTML = "";
-    document.getElementById("currentClient").innerText = "Чат: " + clientId;
     socket.emit("joinClientRoom", clientId);
 }
 
@@ -74,6 +69,11 @@ socket.on("loadMessages", (messages) => {
 });
 
 socket.on("newMessage", renderMessage);
+
+socket.on("updateMessage", (msg) => {
+    const div = document.getElementById(msg.id);
+    if (div) div.innerHTML = formatMessage(msg);
+});
 
 function sendMessage() {
     if (!selectedClient) return alert("Выберите клиента");
@@ -90,6 +90,20 @@ function sendMessage() {
     input.value = "";
 }
 
+function editMessage(id) {
+    if (!selectedClient) return;
+
+    const newText = prompt("Новое сообщение:");
+    if (!newText) return;
+
+    socket.emit("editMessage", {
+        clientId: selectedClient,
+        id,
+        text: newText,
+        sender: "admin"
+    });
+}
+
 function renameClient() {
     if (!selectedClient) return;
 
@@ -104,10 +118,19 @@ function renameClient() {
 
 function renderMessage(msg) {
     const div = document.createElement("div");
-    div.innerHTML = `<b>${msg.sender}:</b> ${msg.text}`;
+    div.id = msg.id;
+    div.innerHTML = formatMessage(msg);
     document.getElementById("chat").appendChild(div);
+}
+
+function formatMessage(msg) {
+    return `
+        <b>${msg.sender}:</b> ${msg.text}
+        <button onclick="editMessage(${msg.id})">✏</button>
+    `;
 }
 </script>
 
 </body>
 </html>
+
