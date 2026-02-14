@@ -21,6 +21,7 @@ io.on("connection", (socket) => {
     socket.emit("loadMessages", messages);
 
     socket.on("sendMessage", (data) => {
+        console.log("Message received:", data);
         const message = {
             id: Date.now(),
             text: data.text,
@@ -33,6 +34,7 @@ io.on("connection", (socket) => {
     });
 
     socket.on("editMessage", (data) => {
+       console.log("Message received:", data);
         const msg = messages.find(m => m.id === data.id);
         if (msg) {
             msg.text = data.text;
@@ -51,4 +53,5 @@ server.listen(3000, () => {
     console.log("Server started on port 3000");
 
 });
+
 
