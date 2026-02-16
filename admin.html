@@ -24,6 +24,56 @@
             padding: 3px 7px;
             font-size: 12px;
         }
+
+        html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    height: 100vh;
+}
+
+/* Левая колонка */
+#clients {
+    width: 250px;
+    border-right: 1px solid #ccc;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    background: #f8f8f8;
+}
+
+/* Правая часть */
+#chatArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* Блок сообщений */
+#chat {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #fff;
+}
+
+/* Нижняя панель */
+#chatArea input {
+    padding: 6px;
+    margin-right: 5px;
+}
+
+#chatArea button {
+    padding: 6px 10px;
+    cursor: pointer;
+}
     </style>
 </head>
 <body>
@@ -192,7 +242,3 @@ function formatMessage(msg) {
 
 </body>
 </html>
-
-
-
-
