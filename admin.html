@@ -32,7 +32,9 @@
 
 body {
     display: flex;
+    font-family: Arial;
     height: 100vh;
+    margin: 0;
 }
 
 /* Левая колонка */
@@ -73,6 +75,29 @@ body {
 #chatArea button {
     padding: 6px 10px;
     cursor: pointer;
+}
+.clientBtn {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    background: white;
+}
+
+/* Поле ввода не на всю ширину экрана */
+#msg {
+    width: 300px;
+    max-width: 60%;
+}
+
+/* Кнопки в чате — нормальный размер */
+#chatArea button {
+    width: auto;
+    display: inline-block;
+}
+
+/* Сообщения — аккуратные отступы */
+#chat div {
+    margin-bottom: 8px;
 }
     </style>
 </head>
@@ -242,3 +267,4 @@ function formatMessage(msg) {
 
 </body>
 </html>
+
