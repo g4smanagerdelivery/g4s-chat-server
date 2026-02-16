@@ -51,7 +51,10 @@ io.on("connection", (socket) => {
 
         io.emit("clientsList", clients);
     }
-
+    
+        socket.on("typing", ({ clientId }) => {
+        socket.to(clientId).emit("typing");
+});
     // ===== ОТКЛЮЧЕНИЕ =====
     socket.on("disconnect", () => {
         if (clientId && clients[clientId]) {
@@ -165,3 +168,4 @@ io.on("connection", (socket) => {
 server.listen(3000, () => {
     console.log("SERVER READY");
 });
+
