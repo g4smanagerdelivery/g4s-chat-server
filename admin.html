@@ -25,8 +25,18 @@
         }
     </style>
 </head>
-<body>
+<body style="display:none;">
+<script>
+const ADMIN_PASSWORD = "g4s2026";
 
+const entered = prompt("Введите пароль администратора:");
+
+if (entered === ADMIN_PASSWORD) {
+    document.body.style.display = "block";
+} else {
+    document.body.innerHTML = "<h1 style='text-align:center;margin-top:50px;'>Доступ запрещён</h1>";
+}
+</script>   
 <div id="clients">
     <h3>Клиенты</h3>
     <div id="clientsList"></div>
@@ -181,3 +191,4 @@ function formatMessage(msg) {
 
 </body>
 </html>
+
