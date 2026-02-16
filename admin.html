@@ -3,20 +3,60 @@
 <head>
     <title>Admin Panel</title>
     <meta http-equiv="Cache-Control" content="no-store" />
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
     <style>
-        body { display: flex; font-family: Arial; }
-        #clients { width: 250px; border-right: 1px solid #ccc; padding: 10px; }
-        #chatArea { flex: 1; padding: 10px; }
-        #chat { height: 400px; overflow: auto; border: 1px solid #ccc; margin-bottom: 10px; padding: 5px; }
-        .clientBtn { 
-            display: flex; 
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ===== ЛЕВАЯ КОЛОНКА ===== */
+        #clients {
+            width: 260px;
+            border-right: 1px solid #ddd;
+            background: #f7f7f7;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        #clients h3 {
+            margin-top: 0;
+        }
+
+        .clientBtn {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 6px;
+            border: 1px solid #ccc;
+            background: white;
+            cursor: pointer;
+            display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 5px; 
-            padding: 5px; 
-            cursor: pointer; 
-            width: 100%;
+            transition: 0.2s;
         }
+
+        .clientBtn:hover {
+            background: #eee;
+        }
+
+        .clientBtn.active {
+            background: #dbeeff;
+            border-color: #4da3ff;
+        }
+
         .badge {
             background: red;
             color: white;
@@ -25,115 +65,92 @@
             font-size: 12px;
         }
 
-        html, body {
-    height: 100%;
-    margin: 0;
-}
+        /* ===== ПРАВАЯ ЧАСТЬ ===== */
+        #chatArea {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+        }
 
-body {
-    display: flex;
-    font-family: Arial;
-    height: 100vh;
-    margin: 0;
-}
+        #currentClient {
+            margin-top: 0;
+        }
 
-/* Левая колонка */
-#clients {
-    width: 250px;
-    border-right: 1px solid #ccc;
-    padding: 10px;
-    box-sizing: border-box;
-    overflow-y: auto;
-    background: #f8f8f8;
-}
+        #chat {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            background: #fff;
+            margin-bottom: 10px;
+        }
 
-/* Правая часть */
-#chatArea {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 10px;
-    box-sizing: border-box;
-}
+        .message {
+            margin-bottom: 8px;
+        }
 
-/* Блок сообщений */
-#chat {
-    flex: 1;
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    margin-bottom: 10px;
-    padding: 10px;
-    background: #fff;
-}
+        .message button {
+            margin-left: 5px;
+            font-size: 12px;
+        }
 
-/* Нижняя панель */
-#chatArea input {
-    padding: 6px;
-    margin-right: 5px;
-}
+        /* ===== НИЖНЯЯ ПАНЕЛЬ ===== */
+        .bottomBar {
+            display: flex;
+            gap: 5px;
+        }
 
-#chatArea button {
-    padding: 6px 10px;
-    cursor: pointer;
-}
-.clientBtn {
-    width: 100%;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    background: white;
-}
+        #msg {
+            flex: 1;
+            padding: 6px;
+        }
 
-/* Поле ввода не на всю ширину экрана */
-#msg {
-    width: 300px;
-    max-width: 60%;
-}
-
-/* Кнопки в чате — нормальный размер */
-#chatArea button {
-    width: auto;
-    display: inline-block;
-}
-
-/* Сообщения — аккуратные отступы */
-#chat div {
-    margin-bottom: 8px;
-}
+        button {
+            padding: 6px 12px;
+            cursor: pointer;
+        }
     </style>
 </head>
-<body>
+
+<body style="display:none;">
+
 <script>
 const ADMIN_PASSWORD = "fog";
 
 const entered = prompt("Введите пароль администратора:");
 
 if (entered === ADMIN_PASSWORD) {
-    document.body.style.display = "block";
+    document.body.style.display = "flex";
 } else {
     document.body.innerHTML = "<h1 style='text-align:center;margin-top:50px;'>Доступ запрещён</h1>";
 }
-</script>   
+</script>
+
+<!-- ===== ЛЕВАЯ КОЛОНКА ===== -->
 <div id="clients">
     <h3>Клиенты</h3>
     <div id="clientsList"></div>
 </div>
 
+<!-- ===== ПРАВАЯ ЧАСТЬ ===== -->
 <div id="chatArea">
     <h3 id="currentClient">Выберите клиента</h3>
     <div id="chat"></div>
-    <input id="msg" placeholder="Введите сообщение">
-    <button onclick="sendMessage()">Отправить</button>
-    <button onclick="renameClient()">Переименовать</button>
-</div>
 
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <div class="bottomBar">
+        <input id="msg" placeholder="Введите сообщение">
+        <button onclick="sendMessage()">Отправить</button>
+        <button onclick="renameClient()">Переименовать</button>
+    </div>
+</div>
 
 <script>
 const socket = io("https://g4s-chat-server.onrender.com");
 
 let selectedClient = null;
 
-// ===== ЗАГРУЗКА СПИСКА =====
+/* ===== ЗАГРУЗКА СПИСКА ===== */
 socket.emit("getClients");
 
 socket.on("clientsList", (clients) => {
@@ -157,40 +174,50 @@ socket.on("clientsList", (clients) => {
             </span>
         `;
 
-        btn.onclick = () => selectClient(id);
+        btn.onclick = () => selectClient(id, c.name);
 
         container.appendChild(btn);
     });
 });
 
-// ===== ВЫБОР КЛИЕНТА =====
-function selectClient(clientId) {
+/* ===== ВЫБОР КЛИЕНТА ===== */
+function selectClient(clientId, name) {
     selectedClient = clientId;
+
+    document.querySelectorAll(".clientBtn").forEach(btn => {
+        btn.classList.remove("active");
+    });
+
+    document.getElementById("client-" + clientId).classList.add("active");
+    document.getElementById("currentClient").innerText = name;
 
     document.getElementById("chat").innerHTML = "";
 
     socket.emit("joinClientRoom", clientId);
-
-    // Обнуляем счётчик
     socket.emit("markAsRead", clientId);
 }
 
-// ===== ЗАГРУЗКА СООБЩЕНИЙ =====
+/* ===== ЗАГРУЗКА СООБЩЕНИЙ ===== */
 socket.on("loadMessages", (messages) => {
     const chat = document.getElementById("chat");
     chat.innerHTML = "";
     messages.forEach(renderMessage);
+    scrollToBottom();
 });
 
-// ===== НОВОЕ СООБЩЕНИЕ =====
-socket.on("newMessage", renderMessage);
+/* ===== НОВОЕ СООБЩЕНИЕ ===== */
+socket.on("newMessage", (msg) => {
+    renderMessage(msg);
+    scrollToBottom();
+});
 
+/* ===== ОБНОВЛЕНИЕ СООБЩЕНИЯ ===== */
 socket.on("updateMessage", (msg) => {
     const div = document.getElementById(msg.id);
     if (div) div.innerHTML = formatMessage(msg);
 });
 
-// ===== ОБНОВЛЕНИЕ UNREAD =====
+/* ===== ОБНОВЛЕНИЕ UNREAD ===== */
 socket.on("updateUnread", (data) => {
     const btn = document.getElementById("client-" + data.clientId);
     if (!btn) return;
@@ -205,7 +232,7 @@ socket.on("updateUnread", (data) => {
     }
 });
 
-// ===== ОТПРАВКА СООБЩЕНИЯ =====
+/* ===== ОТПРАВКА ===== */
 function sendMessage() {
     if (!selectedClient) return alert("Выберите клиента");
 
@@ -221,7 +248,7 @@ function sendMessage() {
     input.value = "";
 }
 
-// ===== РЕДАКТИРОВАНИЕ =====
+/* ===== РЕДАКТИРОВАНИЕ (клиент не видит) ===== */
 function editMessage(id) {
     if (!selectedClient) return;
 
@@ -236,7 +263,7 @@ function editMessage(id) {
     });
 }
 
-// ===== ПЕРЕИМЕНОВАНИЕ =====
+/* ===== ПЕРЕИМЕНОВАНИЕ ===== */
 function renameClient() {
     if (!selectedClient) return;
 
@@ -249,9 +276,10 @@ function renameClient() {
     });
 }
 
-// ===== РЕНДЕР СООБЩЕНИЯ =====
+/* ===== РЕНДЕР ===== */
 function renderMessage(msg) {
     const div = document.createElement("div");
+    div.className = "message";
     div.id = msg.id;
     div.innerHTML = formatMessage(msg);
     document.getElementById("chat").appendChild(div);
@@ -263,8 +291,12 @@ function formatMessage(msg) {
         <button onclick="editMessage(${msg.id})">✏</button>
     `;
 }
+
+function scrollToBottom() {
+    const chat = document.getElementById("chat");
+    chat.scrollTop = chat.scrollHeight;
+}
 </script>
 
 </body>
 </html>
-
