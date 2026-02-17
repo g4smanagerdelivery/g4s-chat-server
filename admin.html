@@ -319,8 +319,8 @@ function formatMessage(msg) {
     return `
         <b>${msg.sender}:</b> ${msg.text}
         ${msg.edited ? "<span style='color:gray;font-size:12px;'> (отредактировано)</span>" : ""}
-        <button class="editVisible" onclick="editMessageVisible(${msg.id})">🟢</button>
-        <button class="editSilent" onclick="editMessageSilent(${msg.id})">🔴</button>
+        <button class="editVisible" onclick="editMessageVisible(${msg.id})">ред+</button>
+        <button class="editSilent" onclick="editMessageSilent(${msg.id})">ред-</button>
     `;
 }
 
@@ -332,3 +332,4 @@ function scrollToBottom() {
 
 </body>
 </html>
+
