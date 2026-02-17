@@ -111,22 +111,45 @@ io.on("connection", (socket) => {
     });
 
     // ===== РЕДАКТИРОВАНИЕ =====
-    socket.on("editMessage", ({ clientId, id, text, sender }) => {
-        if (!clients[clientId]) return;
+    socket.on("editMessage", (data) => {
 
-        const message = clients[clientId].messages.find(m => m.id == id);
-        if (!message) return;
+    const { clientId, id, text, edited } = data;
 
-        message.text = text;
+    // Обновляем в БД
+    db.run(
+        "UPDATE messages SET text = ?, edited = ? WHERE id = ?",
+        [text, edited ? 1 : 0, id],
+        function(err) {
+            if (err) return;
 
-        if (sender === "client") {
-            message.edited = true;
+            // Получаем обновлённое сообщение
+            db.get(
+                "SELECT * FROM messages WHERE id = ?",
+                [id],
+                (err, row) => {
+
+                    if (!row) return;
+
+                    // ===== АДМИНУ отправляем всегда =====
+                    io.to(clientId).emit("updateMessage", row);
+
+                    // ===== КЛИЕНТУ =====
+                    if (edited) {
+                        // ред+ — клиент видит пометку
+                        io.to(clientId + "_client").emit("updateMessage", row);
+                    } else {
+                        // ред- — скрываем факт редактирования
+                        const hidden = {
+                            ...row,
+                            edited: 0
+                        };
+                        io.to(clientId + "_client").emit("updateMessage", hidden);
+                    }
+                }
+            );
         }
-
-        saveData();
-
-        io.to(clientId).emit("updateMessage", message);
-    });
+    );
+});
 
     // ===== ПОМЕТИТЬ КАК ПРОЧИТАНО =====
     socket.on("markAsRead", (clientId) => {
@@ -168,4 +191,5 @@ io.on("connection", (socket) => {
 server.listen(3000, () => {
     console.log("SERVER READY");
 });
+
 
