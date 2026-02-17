@@ -111,44 +111,38 @@ io.on("connection", (socket) => {
     });
 
     // ===== РЕДАКТИРОВАНИЕ =====
-    socket.on("editMessage", (data) => {
+socket.on("editMessage", (data) => {
 
     const { clientId, id, text, edited } = data;
 
-    // Обновляем в БД
-    db.run(
-        "UPDATE messages SET text = ?, edited = ? WHERE id = ?",
-        [text, edited ? 1 : 0, id],
-        function(err) {
-            if (err) return;
+    if (!clients[clientId]) return;
 
-            // Получаем обновлённое сообщение
-            db.get(
-                "SELECT * FROM messages WHERE id = ?",
-                [id],
-                (err, row) => {
+    const messages = clients[clientId].messages;
 
-                    if (!row) return;
+    const msg = messages.find(m => m.id == id);
 
-                    // ===== АДМИНУ отправляем всегда =====
-                    io.to(clientId).emit("updateMessage", row);
+    if (!msg) {
+        console.log("Сообщение не найдено:", id);
+        return;
+    }
 
-                    // ===== КЛИЕНТУ =====
-                    if (edited) {
-                        // ред+ — клиент видит пометку
-                        io.to(clientId + "_client").emit("updateMessage", row);
-                    } else {
-                        // ред- — скрываем факт редактирования
-                        const hidden = {
-                            ...row,
-                            edited: 0
-                        };
-                        io.to(clientId + "_client").emit("updateMessage", hidden);
-                    }
-                }
-            );
-        }
-    );
+    // Обновляем текст
+    msg.text = text;
+
+    // Если ред+ → сохраняем флаг
+    if (edited) {
+        msg.edited = true;
+    }
+
+    // Если ред- → убираем флаг
+    if (!edited) {
+        msg.edited = false;
+    }
+
+    saveData();
+
+    // Отправляем обновление всем в комнате
+    io.to(clientId).emit("updateMessage", msg);
 });
 
     // ===== ПОМЕТИТЬ КАК ПРОЧИТАНО =====
@@ -191,5 +185,6 @@ io.on("connection", (socket) => {
 server.listen(3000, () => {
     console.log("SERVER READY");
 });
+
 
 
