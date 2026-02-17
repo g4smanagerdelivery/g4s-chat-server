@@ -95,6 +95,19 @@
             font-size: 12px;
         }
 
+        /* Цветные кнопки */
+        .editVisible {
+            background: green;
+            color: white;
+            border: none;
+        }
+
+        .editSilent {
+            background: red;
+            color: white;
+            border: none;
+        }
+
         /* ===== НИЖНЯЯ ПАНЕЛЬ ===== */
         .bottomBar {
             display: flex;
@@ -248,8 +261,8 @@ function sendMessage() {
     input.value = "";
 }
 
-/* ===== РЕДАКТИРОВАНИЕ (клиент не видит) ===== */
-function editMessage(id) {
+/* ===== РЕДАКТИРОВАНИЕ С ПОМЕТКОЙ ===== */
+function editMessageVisible(id) {
     if (!selectedClient) return;
 
     const newText = prompt("Новое сообщение:");
@@ -259,7 +272,24 @@ function editMessage(id) {
         clientId: selectedClient,
         id,
         text: newText,
-        sender: "admin"
+        sender: "admin",
+        edited: true
+    });
+}
+
+/* ===== РЕДАКТИРОВАНИЕ БЕЗ ПОМЕТКИ ===== */
+function editMessageSilent(id) {
+    if (!selectedClient) return;
+
+    const newText = prompt("Новое сообщение:");
+    if (!newText) return;
+
+    socket.emit("editMessage", {
+        clientId: selectedClient,
+        id,
+        text: newText,
+        sender: "admin",
+        edited: false
     });
 }
 
@@ -288,7 +318,9 @@ function renderMessage(msg) {
 function formatMessage(msg) {
     return `
         <b>${msg.sender}:</b> ${msg.text}
-        <button onclick="editMessage(${msg.id})">✏</button>
+        ${msg.edited ? "<span style='color:gray;font-size:12px;'> (отредактировано)</span>" : ""}
+        <button class="editVisible" onclick="editMessageVisible(${msg.id})">🟢</button>
+        <button class="editSilent" onclick="editMessageSilent(${msg.id})">🔴</button>
     `;
 }
 
