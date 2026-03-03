@@ -22,7 +22,9 @@ if (fs.existsSync("data.json")) {
 }
 
 function saveData() {
-    fs.writeFileSync("data.json", JSON.stringify(clients, null, 2));
+    fs.writeFile("data.json", JSON.stringify(clients, null, 2), err => {
+        if (err) console.error(err);
+    });
 }
 
 // ===== SOCKET =====
@@ -185,6 +187,7 @@ socket.on("editMessage", (data) => {
 server.listen(3000, () => {
     console.log("SERVER READY");
 });
+
 
 
 
